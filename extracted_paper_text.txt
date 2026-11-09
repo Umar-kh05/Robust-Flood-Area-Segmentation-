@@ -1,0 +1,909 @@
+=== PAGE 1 ===
+Cross-Dataset Federated Learning for Floodwater
+Segmentation:
+A Literature Review and Proposed Comparative
+Study
+Taha Ali
+Department of Computer Science
+FAST-NUCES
+Lahore, Pakistan
+M. Usman
+Department of Computer Science
+FAST-NUCES
+Lahore, Pakistan
+Department of Computer Science
+FAST-NUCES
+Lahore, Pakistan
+Abstract—Accurate floodwater segmentation supports emer-
+gency response, exposure assessment, and recovery planning, yet
+robust models require geographically diverse labeled imagery that
+is often distributed across separate data owners. Federated learn-
+ing (FL) permits collaborative model training while raw images
+remain at their source, but strong cross-dataset heterogeneity
+can cause unstable optimization and client drift. This review
+analyzes 20 studies spanning federated optimization, federated
+semantic segmentation, and remote-sensing flood mapping. It
+motivates a controlled comparison of FedAvg, FedProx, FedNova,
+and SCAFFOLD using one independently collected Sentinel-1
+flood dataset per client: ETCI 2021, MMFlood, and Kuro Siwo.
+A common U-Net and harmonized binary target will isolate the
+effect of the FL optimizer. The reviewed evidence shows that
+advanced algorithms address different types of heterogeneity
+and that no method is uniformly superior. It also shows that
+flood studies remain primarily centralized or single-dataset. The
+resulting gap is the absence of a controlled comparison of
+established FL optimizers for temporary-floodwater segmentation
+under real cross-dataset client heterogeneity.
+Keywords—federated learning, floodwater segmentation, non-
+IID data, Sentinel-1, U-Net, remote sensing
+I. I NTRODUCTION
+Floods are among the most destructive natural hazards,
+causing loss of life, displacement, infrastructure damage, and
+long-term economic disruption. Rapid delineation of inundated
+areas is therefore important for emergency response, resource
+allocation, exposure assessment, and post-disaster recovery.
+Earth-observation systems can survey large or inaccessible
+areas, while Synthetic Aperture Radar (SAR), particularly
+Sentinel-1, remains useful during flood events because it
+operates day and night and is less obstructed by clouds than
+optical sensing. Flood mapping is nevertheless not identical to
+general water detection. Permanent rivers, lakes, and reservoirs
+may already be present before an event; operational mapping
+must identify temporary inundation without treating all surface
+water as newly flooded [14], [17].
+Semantic segmentation provides a pixel-level solution to
+this problem. Encoder–decoder networks such as U-Net learn
+both contextual and spatial information and have produced
+useful flood masks from Sentinel-1 imagery [13], [18]. Their
+reliability, however, depends on representative annotations
+across events, climates, land covers, and acquisition conditions.
+Public flood datasets differ in geographic coverage, sensor
+preprocessing, label generation, class balance, temporal con-
+text, and sample count [16], [17], [20]. A model trained on
+one source can consequently perform poorly when deployed
+on another domain; recent cross-benchmark evidence confirms
+that individual-dataset models frequently lose accuracy outside
+their training distribution [19].
+Centralized multi-dataset training can increase diversity,
+but it assumes that every institution can transfer imagery and
+annotations to one location. Storage, bandwidth, ownership,
+governance, and geospatial-security constraints may make that
+assumption impractical. FL instead sends a shared model to
+data-holding clients, performs local optimization, and aggre-
+gates model updates at a server. Raw imagery remains local,
+although FL alone is not a formal privacy guarantee because
+protection against information leakage requires mechanisms
+such as secure aggregation or differential privacy.
+The standard FedAvg algorithm aggregates client parame-
+ters in proportion to local sample counts [2]. Its simplicity and
+communication efficiency make it the principal baseline, but
+several independent flood datasets create more than an artificial
+label imbalance. Each client may have a distinct feature
+distribution, geography, annotation process, class ratio, and
+dataset size. Local updates can therefore move in conflicting
+directions. FedProx constrains local deviation from the global
+model [3]; SCAFFOLD uses control variates to correct client
+drift [4]; and FedNova normalizes updates when clients per-
+form unequal amounts of local computation [5]. NIID-Bench
+demonstrates that their rankings change across heterogeneity
+settings, so superiority cannot be assumed without task-specific
+evaluation [6].
+The base study by Islam applied a U-Net and FedAvg
+to 290 grayscale aerial flood images divided among three
+simulated clients [1]. Its federated model achieved 0.7186 IoU
+and 0.8363 F1, compared with 0.7450 IoU and 0.8539 F1
+under centralized training; federated recall was higher (0.8883
+versus 0.8638) but precision was lower (0.7900 versus 0.8443).
+These results establish feasibility, yet all clients were partitions
+of one Kaggle dataset. Their non-IID behavior came from
+Umar Shoaib
+1
+
+=== PAGE 2 ===
+unequal sample counts and flood-pixel ratios, not independent
+geographic domains. The study also compared only FedAvg
+and did not report a separate numerical cross-dataset evalua-
+tion.
+1) construct compatible client pipelines while preserving
+the separation of the three datasets;
+2) compare the four algorithms using IoU, Dice/F1,
+precision, recall, convergence, and per-client perfor-
+mance;
+3) benchmark federated models against centralized and
+local-only reference models;
+4) examine whether global gains are distributed fairly
+across clients rather than dominated by the largest
+dataset; and
+5) identify the optimization strategy most robust to real
+flood-domain heterogeneity.
+II. L ITERATURE REVIEW
+This narrative review covers 20 studies selected for direct
+relevance to at least one of three components: heterogeneity-
+aware FL optimization, federated semantic segmentation, or
+flood segmentation and dataset generalization. Sixteen were
+published between 2021 and 2025. Four older works are
+retained because they introduce the four algorithms being
+compared. Tables I–IV report each study’s method, dataset,
+evaluation measures, representative performance, and principal
+limitation. Scores are reproduced as reported and are not
+directly rankable because tasks, splits, architectures, and label
+definitions differ.
+A. Federated Optimization Under Heterogeneity
+FedAvg established iterative local training followed by
+weighted parameter averaging [2]. Its communication savings
+are substantial, but additional local epochs can amplify drift
+when client objectives differ. FedProx adds a proximal penalty
+around the current global parameters and is therefore relevant
+when independent flood clients produce divergent updates [3].
+Its behavior depends on the coefficient µ: weak regularization
+resembles FedAvg, while excessive regularization suppresses
+useful local learning.
+SCAFFOLD estimates server and client control variates
+to correct local directions [4]. Its strong results under severe
+label heterogeneity make it theoretically attractive for cross-
+dataset clients, although maintaining control states increases
+implementation and communication cost. FedNova addresses
+objective inconsistency by normalizing updates for unequal
+local work [5]. Consequently, its central advantage is not fully
+tested if all clients always execute identical local steps. A
+sound comparison should use equal computation for the main
+statistical-heterogeneity experiment and, if resources permit,
+add an unequal-local-step stress test.
+NIID-Bench is especially important because it compares all
+four methods across several non-IID constructions and finds
+no universal winner [6]. However, these are mostly artificial
+partitions of classification datasets. Islam’s flood experiment
+is closer to the target application, but its clients still originate
+from one aerial dataset [1]. Table I shows that optimization
+evidence is strong, whereas direct evidence for independent
+flood domains remains absent.
+B. Federated Segmentation and Domain Shift
+Federated semantic segmentation adds pixel imbalance
+and spatial consistency to the optimization problem. FedDG
+uses episodic learning and frequency-space interpolation to
+transfer distributional information among medical clients and
+improve unseen-domain performance [7]. FedDrive studies
+autonomous-driving segmentation under statistical and appear-
+ance heterogeneity; its results show that naive FedAvg can
+degrade sharply and that local normalization and style aug-
+mentation can recover performance [8]. These studies support
+evaluation on independent domains, but medical and RGB
+driving styles differ physically from SAR backscatter.
+FedSeg addresses class-heterogeneous segmentation
+through a background-aware loss and pixel-level contrastive
+learning [9]. FedST uses diffusion-based style transfer
+to synthesize cross-domain appearances [10]. Their gains
+demonstrate that segmentation-specific interventions can
+exceed optimizer-only baselines, but they alter losses,
+representations, or data distributions. They are therefore
+related work rather than fair replacements for the proposed
+controlled optimizer comparison.
+GeoFed is the closest remote-sensing precedent. It models
+coupled class-distribution and object-appearance heterogeneity
+across institutions and improves land-cover/building segmen-
+tation over FedAvg [11]. FedSaaS similarly aligns local and
+global class representations with prototypes, contrastive losses,
+and adversarial harmonization [12]. Both improve accuracy
+but introduce several components and, in FedSaaS, exemplar
+transfer. The proposed project deliberately keeps U-Net and
+the loss fixed to measure the behavior of four established
+optimizers before adding segmentation-specific mechanisms.
+C. Flood Segmentation Models and Evaluation
+Flood studies show that strong in-domain segmentation
+does not by itself establish cross-domain robustness. Paul and
+Ganju combine U-Net ensembles, pseudo-labeling, and con-
+ditional random-field post-processing on the ETCI challenge
+[13]. Pech-May et al. train U-Net on Sentinel-1 Sen1Floods11
+and report high precision but lower recall, illustrating the risk
+of missed flood pixels despite favorable aggregate accuracy
+[18]. Bai et al. explicitly separate permanent and temporary
+water, and their lower temporary-water scores confirm that
+floodwater is harder than generic water segmentation [14]. This
+2
+This project assigns ETCI 2021, MMFlood, and Kuro Siwo
+to three independent clients using Sentinel-1 VV/VH inputs
+and a binary source-annotated flood target. Temporary inun-
+dation is the intended application, but annotations do not con-
+sistently distinguish it from permanent water across the three
+datasets. A common U-Net, preprocessing policy, initialization,
+and training budget isolate the FL optimizer. FedAvg, FedProx,
+FedNova, and SCAFFOLD are compared under genuine cross-
+dataset heterogeneity. The objectives are to:
+Section II reviews federated optimization, segmentation un-
+der domain shift, and flood models and datasets, then develops
+the research gap, problem statement, and questions. Section III
+presents the proposed methodology and experimental setup for
+the controlled comparison.
+
+=== PAGE 3 ===
+TABLE I. L ITERATURE SURVEY , PART I: FEDERATED OPTIMIZATION AND THE BASE FLOOD -FL STUDY.
+Ref. Year Method Dataset(s) Metrics Reported performance Key limitation
+Islam [1] 2025 U-Net with three-client FedAvg;
+centralized comparison
+Kaggle Flood Area Segmentation;
+one dataset split into 116/54/62
+client samples
+Precision, re-
+call, F1, IoU,
+MPA, FWIoU
+Centralized/FedAvg IoU:
+0.7450/0.7186; F1: 0.8539/0.8363;
+recall: 0.8638/0.8883
+Artificial partitions of one aerial
+dataset; only FedAvg; no separate
+numeric cross-domain test
+McMahan et
+al. [2]
+2017 Weighted averaging after local
+SGD
+MNIST, CIFAR-10, Shakespeare Accuracy,
+rounds
+MNIST target reached in 18 IID
+rounds versus 626 with FedSGD;
+173 versus 483 non-IID rounds
+Classification/language focus;
+susceptible to client drift under
+strong domain shift
+Li et al. [3] 2020 Proximal local objective around
+global weights
+Synthetic, MNIST, FEMNIST,
+Shakespeare, Sent140
+Accuracy,
+convergence
+About 22 percentage-point mean
+accuracy gain over FedAvg in a
+highly heterogeneous/straggler
+setting
+Requires tuning µ; no dense
+segmentation evaluation
+Karimireddy
+et al. [4]
+2020 Server/client control variates
+correct update directions
+EMNIST and synthetic tasks Accuracy,
+rounds
+Severe EMNIST setting reached
+target in 77 rounds versus 258 for
+FedAvg; 0.801 versus 0.787
+accuracy at 1000 rounds
+Extra state and communication;
+classification rather than
+segmentation
+Wang et al.
+[5]
+2020 Normalized aggregation for
+unequal local computation
+Non-IID CIFAR-10, VGG-11 Accuracy Random local epochs: 73.22%
+versus 64.22% for FedAvg; with
+momentum 77.07% versus
+70.44%
+Main benefit depends on variation
+in local work; no segmentation
+task
+Li et al. [6] 2022 NIID-Bench comparison across
+six non-IID constructions
+Nine classification/tabular datasets Accuracy,
+convergence
+One CIFAR-10 setting:
+SCAFFOLD 69.8%, FedAvg
+68.2%, FedProx 67.9%, FedNova
+66.8%; rankings change by setting
+Artificial partitions and
+non-segmentation tasks
+TABLE II. L ITERATURE SURVEY , PART II: FEDERATED SEMANTIC SEGMENTATION AND DOMAIN GENERALIZATION .
+Ref. Year Method Dataset(s) Metrics Reported performance Key limitation
+Liu et al. [7] 2021 Episodic learning in continuous
+frequency space
+Multi-centre fundus and prostate
+MRI
+Dice, Haus-
+dorff distance
+Fundus Dice: 87.03% versus
+85.01% FedAvg; HD: 13.07
+versus 15.93
+Medical domains; frequency/style
+assumptions may not represent
+SAR variation
+Fantauzzo et
+al. [8]
+2022 FL benchmark with local
+normalization and style transfer
+Cityscapes, IDDA mIoU Heterogeneous Cityscapes:
+FedAvg 43.33%; SiloBN+LAB
+53.37%; rainy unseen domain
+53.99%
+RGB driving scenes; different
+client scale and appearance
+physics
+Miao et al. [9] 2023 Background-aware loss plus pixel
+contrastive learning
+Cityscapes, CamVID, Pascal
+VOC, ADE20K
+mIoU, pixel
+accuracy
+Strong non-IID Cityscapes mIoU:
+50.24% versus 10.40% FedAvg;
+CamVID: 63.50% versus 19.06%
+Artificial class heterogeneity;
+changes the loss and
+representation mechanism
+Ma et al. [10] 2024 Diffusion style transfer for
+cross-client image synthesis
+Material, CHAOS medical, race
+and age segmentation
+Dice, VI,
+MPA
+Medical Dice: 0.9233 versus
+0.3622 FedAvg; material Dice:
+0.8145 versus 0.6754
+High generation cost and
+additional information-sharing
+assumptions
+Tan et al. [11] 2024 Global insight, essential features,
+and local-global balance
+FedFBP, FedCASID, FedInria mIoU/IoU FedFBP: 66.70% versus 63.13%
+FedAvg; FedCASID: 74.34%
+versus 71.18%
+Preprint; land-cover/building
+tasks; several coupled modules
+Yu et al. [12] 2025 Global class prototypes and local
+adversarial harmonization
+Driving-scene client domains Accuracy,
+mIoU
+Severe shift mIoU: 48.67% versus
+37.19% FedAvg; unseen domain:
+45.96%
+Exemplar upload and high
+overhead; RGB driving rather
+than SAR
+Portal´es-Juli`a et al. provide the strongest direct evidence
+for the proposed gap by evaluating flood models across several
+Sentinel benchmarks [19]. Joint centralized training improves
+transfer, whereas single-dataset models struggle outside their
+source. Their work demonstrates the value of cross-dataset
+diversity but presumes that data can be pooled. The proposed
+study asks whether FL can obtain collaborative benefit while
+maintaining the three dataset silos.
+D. Flood Datasets and Domain Compatibility
+Dataset choice determines whether client heterogeneity is
+scientifically meaningful or merely incompatible. FloodNet
+supplies rich UA V imagery and multiple damage classes, but
+its RGB aerial modality and post-Hurricane-Harvey setting do
+not match a common Sentinel-1 VV/VH model input [15]. It is
+valuable literature evidence, not an appropriate client for the
+final homogeneous-channel experiment. DeepFlood similarly
+adds high-resolution aerial and SAR data plus inundated-
+vegetation labels, but its four-class regional design and mixed
+resolutions would introduce additional experimental factors
+[20].
+MMFlood and Kuro Siwo are better aligned with satellite
+flood delineation. MMFlood covers 95 events in 42 countries
+and links Sentinel-1 acquisitions with CEMS flood maps and
+auxiliary terrain/hydrography data [16]. Kuro Siwo covers 43
+events and explicitly represents floodwater, permanent water,
+and non-water using multi-temporal dual-polarization SAR
+[17]. Together with ETCI, these datasets provide independent
+acquisition and annotation pipelines while retaining a common
+Sentinel-1 representation. Their compatibility is not automatic:
+masks, no-data conventions, spatial resolution, normalization,
+and event-level splits must be audited before training.
+E. Critical Synthesis, Research Gap, and Problem Statement
+The reviewed literature exposes three recurring trade-offs.
+First, optimization methods target different failure modes. Fed-
+Prox controls local deviation, SCAFFOLD corrects drift direc-
+tion, and FedNova corrects unequal local computation. Their
+3
+distinction motivates the application, but annotations do not
+consistently isolate temporary inundation. Source flood labels
+are used; verified permanent water is negative, and uncertain or
+invalid pixels are ignored.
+
+=== PAGE 4 ===
+TABLE III. L ITERATURE SURVEY , PART III: FLOOD -SEGMENTATION METHODS AND CROSS -DATASET EVALUATION .
+Ref. Year Method Dataset(s) Metrics Reported performance Key limitation
+Paul and
+Ganju [13]
+2021 Semi-supervised U-Net ensembles,
+pseudo-label filtering, CRF
+ETCI/NASA Impact Flood
+Detection, Sentinel-1
+IoU IoU 0.7654 versus approximately
+0.60 challenge baseline
+Centralized, challenge-specific
+pipeline; depends on pseudo-label
+quality
+Bai et al. [14] 2021 BASNet-style segmentation with
+focal, IoU, and SSIM losses;
+S1/S2 fusion
+Sen1Floods11 mIoU, IoU,
+omission,
+commission,
+OA
+Temporary-water test: 52.99%
+mIoU, 52.30% IoU, 92.81% OA
+Optical availability/cloud
+sensitivity; temporary water
+remained difficult
+Pech-May et
+al. [18]
+2024 U-Net on dual-polarized
+Sentinel-1
+Sen1Floods11 Accuracy,
+precision,
+recall, F1,
+IoU
+At 200 epochs: precision 0.9431,
+recall 0.7639, F1 0.8441, IoU
+0.7302
+Single centralized dataset;
+event-level separation not
+established; SAR-shadow errors
+Portal´es-Juli`a
+et al. [19]
+2025 Cross-dataset U-Net comparison
+across S1, S2, and multimodal
+inputs
+Kuro Siwo, WorldFloods,
+S1S2-Water; tests on UNOSAT
+and Sen1Floods11
+IoU Multimodal model: 83.55 IoU
+points on UNOSAT and 75.97 on
+Sen1Floods11; joint training
+improved transfer
+Centralized pooling; modality and
+label harmonization not studied
+under FL
+TABLE IV . L ITERATURE SURVEY , PART IV: FLOOD DATASETS AND BENCHMARK EVIDENCE .
+Ref. Year Method/contribution Dataset(s) Metrics Reported performance Key limitation
+Rahnemoonfar
+et al. [15]
+2021 UA V post-flood dataset with
+segmentation, classification, and
+VQA baselines
+FloodNet; 2343 high-resolution
+images, 10 segmentation classes
+Per-class
+IoU, mIoU
+PSPNet mIoU 79.69%;
+DeepLabV3+ 61.53%; ENet
+42.61%
+UA V RGB and one event; class
+semantics do not directly equal
+temporary floodwater
+Montello et al.
+[16]
+2022 Multimodal S1, DEM,
+hydrography, and CEMS
+delineations
+MMFlood; 1748 acquisitions, 95
+events, 42 countries
+mIoU Strongest reported binary
+benchmark approximately 66.52%
+mIoU
+CEMS label inconsistency/noise;
+auxiliary modalities are not
+common to all clients
+Bountos et al.
+[17]
+2024 Multi-temporal VV/VH SAR
+benchmark with permanent-water
+separation
+Kuro Siwo; 43 events across six
+continents
+Class F1,
+mIoU
+Three-acquisition
+U-Net-ResNet50: 76.20% mIoU;
+flood F1 80.12%;
+permanent-water F1 78.24%
+Strongest setup uses temporal
+context; event and class imbalance
+Fawakherji et
+al. [20]
+2025 High-resolution aerial/SAR
+dataset for inundated vegetation
+DeepFlood; four semantic classes mIoU,
+class IoU,
+precision,
+recall
+U-Net with high-resolution
+RGB+S1: 72.4% mIoU;
+inundated-vegetation IoU 77.7%
+Regional four-class data;
+modality/resolution mismatch
+with S1-only clients
+benefits should therefore be interpreted against the hetero-
+geneity actually present rather than treated as interchangeable
+“improvements” over FedAvg. Second, federated segmentation
+papers achieve large gains by changing losses, normalization,
+prototypes, or style distributions. These methods demonstrate
+the importance of domain shift but confound a clean optimizer
+comparison. Third, flood papers use inconsistent meanings
+of water, floodwater, permanent water, and background. High
+overall accuracy can coexist with poor temporary-flood detec-
+tion because background pixels dominate.
+The research gap follows from the intersection of the
+three bodies of work. Flood segmentation is mainly central-
+ized or single-dataset [13], [14], [18], [19]; FL segmentation
+primarily studies medical, driving, or land-cover domains [7],
+[8], [11]; and the base flood-FL study partitions one aerial
+dataset and evaluates only FedAvg [1]. No reviewed study per-
+forms a controlled comparison of FedAvg, FedProx, FedNova,
+and SCAFFOLD for temporary-floodwater segmentation when
+each client owns an independently collected Sentinel-1 dataset.
+The resulting problem statement is: a U-Net trained
+through conventional FedAvg may converge poorly or favor
+particular clients when ETCI 2021, MMFlood, and Kuro
+Siwo create simultaneous geographic, feature, quantity, and
+annotation heterogeneity. It is unknown whether proximal
+regularization, normalized aggregation, or control-variate cor-
+rection provides a more accurate, stable, and balanced global
+floodwater model under this realistic cross-dataset setting.
+The study is guided by four research questions:
+1) How do the four algorithms compare in IoU, Dice/F1,
+precision, and recall under independent dataset do-
+mains?
+2) Which method converges most stably and reaches
+useful validation performance in the fewest commu-
+nication rounds?
+3) Does the algorithm with the best pooled score also
+provide the strongest macro-average and per-client
+performance?
+4) How closely can each federated model approach
+centralized training while improving over local-only
+models?
+4
+Evaluation must therefore use IoU as the primary metric,
+supported by Dice/F1, precision, and recall. A pooled score
+alone is insufficient because the largest client may dominate
+it; macro-averaged and per-client results are needed. Event-
+level separation is also necessary to prevent neighboring patches
+from the same flood appearing in both training and testing. Be-
+cause Kuro Siwo’s strongest results use pre- and post-event im-
+agery, restricting every client to post-event VV/VH improves in-
+put compatibility but removes useful change information. This
+trade-off must be disclosed rather than hidden.
+
+=== PAGE 5 ===
+III. M ETHODOLOGY AND EXPERIMENTAL SETUP
+A. Proposed Methodology
+This study proposes a federated learning framework for bi-
+nary floodwater segmentation using ETCI 2021, MMFlood, and
+Kuro Siwo as three clients. Each client retains its images and
+annotations locally, while a coordinating server distributes a
+shared U-Net and combines client updates. The objective is
+to compare performance across geography, dataset size, image
+characteristics, and annotation procedures.
+Four algorithms will be compared: FedAvg, FedProx, Fed-
+Nova, and SCAFFOLD. FedAvg provides weighted model av-
+eraging [2]; FedProx limits local departures through a proximal
+penalty [3]; FedNova normalizes updates for unequal local com-
+putation [5]; and SCAFFOLD uses control variates to reduce
+client drift [4]. Architecture, preprocessing, loss, initial weights,
+and evaluation remain common, making the federated algorithm
+the principal experimental variable.
+The workflow comprises data auditing, label harmonization,
+group-level splitting, image preparation, local training, server
+aggregation, validation-based selection, and held-out testing.
+Raw images and masks remain local during federated training,
+but this is not a formal privacy guarantee; differential privacy and
+secure aggregation are outside the study. Equal local steps define
+the main experiment, and a second condition introduces unequal
+work. Three local-only models and one pooled centralized model
+assess the benefit of collaboration and the gap to centralized
+training. At each communication round, the server broadcasts its
+current weights, clients optimize on their own training tiles, and
+the selected algorithm forms the next global model. Centralized
+pooling is used only as a comparison condition, separate from
+the data-local federated procedure.
+B. Model Architecture
+A standard U-Net [21] receives a 256 ×256 ×2 input, ordered
+post-event VV then VH, and produces one floodwater logit per
+pixel. Its encoder learns contextual features, while the decoder
+and skip connections restore spatial detail for flood extent and
+boundaries.
+Four encoder blocks have 32, 64, 128, and 256 channels, sepa-
+rated by 2 × 2 max pooling. A 512-channel bottleneck connects
+to decoder blocks with 256, 128, 64, and 32 channels. Every
+block contains two 3 × 3 convolutions, stride 1 and zero padding
+1, each followed by group normalization and ReLU. Normal-
+ization uses eight groups and ε = 10−5, avoiding reliance on
+client-dependent batch statistics. Decoder features are bilinearly
+upsampled by two with align_corners=False , concatenated
+with matching encoder features, and processed by the block.
+Bottleneck dropout is 0.1. A 1 × 1 convolution produces logits;
+sigmoid yields probabilities.
+Training starts from scratch. A pretrained ResNet50 encoder
+is excluded to avoid introducing RGB-to-SAR weight adaptation
+as another variable. Within each seed run, all federated and
+reference models start from identical saved weights.
+C. Dataset and Preprocessing
+Dataset sources: Fixed snapshots are blanchon/
+ETCI-2021-Flood-Detection , revision 921e207 [22];
+links-ads/mmflood , revision 24ca097 [23]; and
+orion-ai-lab/Kuro-Siwo-Webdataset , revision
+e8e61b7 [24]. Full revisions and checksums will be re-
+tained. ETCI uses only data/train samples with matched VV ,
+VH, and flood labels; competition test labels were withheld.
+MMFlood version 1.0.0 [25] requires matched s1_raw , mask ,
+and hydro files. Kuro Siwo uses labeled train_GRD and
+test_GRD , including event metadata and valid-pixel masks;
+unlabeled and SLC components are excluded. Only post-event
+VV/VH enter the model. Elevation, optical imagery, pre-event
+SAR, and hydrography are excluded from inputs.
+Label harmonization: Output masks use 1 for flood, 0 for valid
+non-flood, and 255 for ignore. ETCI raw encoding is checked
+first: valid {0,255} masks are decoded to {0,1}, while {0,1}
+masks are accepted directly [26]. Ignore value 255 is assigned
+only after decoding. Water-body masks are inspected but do
+not automatically erase flood positives. Kuro Siwo class 2 maps
+to flood, classes 0 and 1 to non-flood, and valid_mask =0 to
+ignore [24].
+For MMFlood, let F and H denote decoded flood and hy-
+drography masks. Valid F = 1,H = 0 pixels are positive; valid
+F = 0 pixels are negative; F = 1,H = 1 conflicts are ignored.
+Flood-mask value 255, raster no-data, nonfinite SAR values, and
+undocumented codes are ignored [ 27]. Hydrography accepts
+verified binary {0,1} or {0,255} encoding. Requiring hydrogra-
+phy excludes 736 of 1,748 source scenes, leaving at most 1,012
+before integrity checks [27]. Actual scene, event, tile, and pixel
+counts will be recorded after filtering. Mask values and over-
+lays are inspected before training; label rules are fixed before
+examining test predictions and applied identically across subsets.
+The target represents source-annotated flood extent rather than
+uniformly verified temporary inundation; unsupported encod-
+ings require resolution before inclusion. All-invalid tiles are
+removed. Incomplete hydrography and annotation differences
+remain limitations [28].
+Data separation: Splitting precedes tiling. ETCI uses
+Nebraska for training, North Alabama for validation, and
+Bangladesh for testing, keeping all dates within each region
+together. This is a regional split, not a 60/20/20 event split. MM-
+Flood groups all areas and dates of an EMS activation, then
+assigns approximately 60/20/20 of retained groups. Sorted iden-
+tifiers are shuffled with NumPy default_rng(42) ; validation
+and test each receive max(1, ⌊0.2G⌋) groups, with the remainder
+for training.
+Kuro Siwo retains its official ten-event test partition and holds
+out 20% of remaining groups for validation using the same
+procedure. Each subset requires a usable group and valid flood-
+positive pixels. If necessary, MMFlood and Kuro development
+allocations are retried with seeds 43–141; ETCI permutations
+are checked lexicographically. If none is feasible, grouped cross-
+validation must be specified instead of splitting related tiles.
+Cross-dataset acquisition overlaps are checked; copies overlap-
+ping fixed test groups are excluded from training and validation.
+One saved split manifest governs all methods.
+Image preparation: For ETCI, each RGB polarization PNG
+is converted to floating-point intensity I = (R + G + B)/3 be-
+fore normalization; VV and VH intensities form the two in-
+put channels [26]. Non-overlapping 256 × 256 tiles remain on
+5
+
+=== PAGE 6 ===
+native pixel grids. After normalization, incomplete tiles are zero-
+padded at the bottom and right, with padded targets ignored. No
+common-resolution resampling is applied; MMFlood’s 20 m
+and Kuro Siwo’s 10 m grids therefore yield different physical
+footprints [25, 24].
+Per client and channel, valid training pixels determine the 1st
+and 99th percentiles. Values are clipped and mapped to [−1,1].
+Saved source-specific transforms are used for validation, testing,
+centralized, and local-only models. Invalid pixels become zero
+and are ignored. Training applies independent horizontal and
+vertical flips with probability 0.5 and uniform 0,90,180,270◦
+rotations, identically to images and masks. Evaluation has no
+random augmentation; valid non-flood tiles remain eligible.
+D. Training Configuration
+Table V specifies the main configuration.
+TABLE V: Main training configuration.
+Parameter Configuration
+Participation / rounds All three clients; maximum 100
+Local updates / batch 20 steps per round; 8 tiles
+Optimizer / learning rate SGD, no momentum; constant 0.01
+Scheduler None
+Loss 0.5 masked BCE + 0.5 masked Dice
+FedProx coefficient µ = 0.01
+Weight decay / clipping 10 −4; maximum gradient norm 5
+Seeds 42, 43, 44
+Stopping / threshold Patience 15 checks; probability 0.5
+BCE is averaged over valid mini-batch pixels. Soft Dice is
+calculated over the complete mini-batch:
+LDice = 1 − 2 ∑ j∈M p jy j + ε∑ j∈M p j + ∑ j∈M y j + ε , (1)
+where M contains valid pixels, p j is probability, y j the target,
+and ε = 10−6. A batch without flood-positive targets uses BCE
+alone; an all-invalid batch is replaced before counting a step.
+Clients reshuffle after exhausting their tile lists. Epochs are
+not fixed because dataset sizes differ. For R rounds, Ki local
+steps, batch size B, and Ni training tiles, equivalent epochs are
+Ei ≈ RKiB/Ni. (2)
+Executed steps and equivalent epochs will both be reported.
+Fixed step budgets control computation more directly than equal
+local epochs, which require different numbers of updates for
+differently sized datasets. Client contribution weights use eli-
+gible training-tile counts. Each algorithm applies its published
+aggregation or correction, with common data ordering where
+possible. Validation follows every round. Selection uses the high-
+est equally weighted mean of the three client-validation flood
+IoUs. Training stops after 15 checks without strict improvement
+or 100 rounds; ties retain the earliest best checkpoint, and testing
+follows selection.
+Unequal computation assigns 10, 20, and 30 local steps, rotat-
+ing budgets across seed runs. Total work remains 60 steps per
+round, matching the main condition. Each algorithm is rerun
+from matching initial weights for up to 100 rounds. Unequal
+work provides a direct setting for examining FedNova’s normal-
+ization; results are reported separately. The centralized reference
+receives at most 6,000 steps, checked every 60; each local-only
+reference receives at most 2,000, checked every 20. Centralized
+selection uses mean client-validation IoU; local-only selection
+uses its client’s IoU. Both apply patience 15, earliest-tie selection,
+and common architecture, loss, optimizer, and initial weights.
+Only selected checkpoints are tested; held-out test data do
+not influence optimization or checkpoint choice. Checksums,
+split manifests, normalization limits, tile lists, configurations,
+software versions, hardware, and training logs will be preserved
+for reproducibility.
+E. Evaluation Metrics
+Flood-class IoU is primary because it penalizes false alarms
+and missed inundation. Dice/F1 measures overlap, while pre-
+cision and recall distinguish false alarms from missed water.
+Reporting both is necessary because recall can increase when
+excessive areas are predicted as flooded. These complementary
+measures are:
+IoU = T PT P+ FP + FN , Dice/F1 = 2T P2T P+ FP + FN ,
+(3)
+Precision = T PT P+ FP , Recall = T PT P+ FN . (4)
+T P, FP, and FN represent correctly detected flood, falsely pre-
+dicted flood, and missed flood pixels. Precision assesses false
+alarms; recall assesses missed inundation. Accuracy does not se-
+lect checkpoints because dominant non-flood areas can conceal
+poor detection.
+The threshold is fixed at 0.5 and ignored pixels excluded.
+Counts accumulate over valid test pixels within each client be-
+fore calculating metrics; zero-denominator metrics are undefined.
+Results include per-client scores, their equally weighted macro
+mean, and pooled scores from combined counts. Means and
+standard deviations across seeds, validation-IoU convergence
+curves, and selected rounds will be reported. Improvements are
+assessed per client and through the macro mean. Generalization
+is measured on held-out groups within the three domains; a com-
+pletely new dataset is not evaluated. Differences in annotation
+quality and the loss of pre-event temporal context will be consid-
+ered when comparing client scores. Pooled results are contextual
+because larger clients can dominate them, whereas the macro
+mean gives each source equal weight.
+ACKNOWLEDGMENT
+The authors would like to thank the NASA Earth Science Data
+Systems Program, NASA Digital Transformation AI/ML thrust,
+and IEEE GRSS for organizing the ETCI competition.
+6
+
+=== PAGE 7 ===
+REFERENCES
+[1] M. S. ul Islam, “Robust flood area segmentation through federated
+learning on distributed remote sensing data,” in Proc. Int. Conf. Hori-
+zons of Information Technology and Engineering (HITE), 2025, doi:
+10.1109/HITE68444.2025.11363984. [Online]. Available: https://
+ieeexplore.ieee.org/document/11363984
+[2] H. B. McMahan, E. Moore, D. Ramage, S. Hampson, and B. Aguera y Ar-
+cas, “Communication-efficient learning of deep networks from decentral-
+ized data,” in Proc. AISTATS, 2017, pp. 1273–1282. [Online]. Available:
+https://proceedings.mlr.press/v54/mcmahan17a.html
+[3] T. Li, A. K. Sahu, M. Zaheer, M. Sanjabi, A. Talwalkar,
+and V . Smith, “Federated optimization in heterogeneous
+networks,” in Proc. MLSys, 2020. [Online]. Available:
+https://proceedings.mlsys.org/paper/2020/hash/
+1f5fe83998a09396ebe6477d9475ba0c-Abstract.html
+[4] S. P. Karimireddy, S. Kale, M. Mohri, S. Reddi, S. Stich, and A. T. Suresh,
+“SCAFFOLD: Stochastic controlled averaging for federated learning,”
+in Proc. ICML, 2020, pp. 5132–5143. [Online]. Available: https://
+proceedings.mlr.press/v119/karimireddy20a.html
+[5] J. Wang, Q. Liu, H. Liang, G. Joshi, and H. V . Poor, “Tack-
+ling the objective inconsistency problem in heterogeneous feder-
+ated optimization,” in Proc. NeurIPS, 2020, pp. 7611– 7623. [On-
+line]. Available: https://proceedings.neurips.cc/paper/2020/
+hash/564127c03caab942e503ee6f810f54fd-Abstract.html
+[6] Q. Li, Y . Diao, Q. Chen, and B. He, “Federated learning on non-IID data
+silos: An experimental study,” in Proc. IEEE ICDE, 2022, pp. 965–978.
+[Online]. Available: https://doi.org/10.1109/ICDE53745.2022.
+00077
+[7] Q. Liu, C. Chen, J. Qin, Q. Dou, and P.-A. Heng, “FedDG: Fed-
+erated domain generalization on medical image segmentation
+via episodic learning in continuous frequency space,” in Proc.
+IEEE/CVF CVPR, 2021, pp. 1013–1023. [Online]. Available:
+https://openaccess.thecvf.com/content/CVPR2021/html/
+Liu_FedDG_Federated_Domain_Generalization_on_Medical_
+Image_Segmentation_via_Episodic_CVPR_2021_paper.html
+[8] L. Fantauzzo, E. Fanı, D. Caldarola, A. Tavera, F. Cermelli, M. Ciccone,
+and B. Caputo, “FedDrive: Generalizing federated learning to semantic
+segmentation in autonomous driving,” in Proc. IEEE/RSJ IROS, 2022.
+[Online]. Available: https://arxiv.org/abs/2202.13670
+[9] J. Miao, Z. Yang, L. Fan, and Y . Yang, “FedSeg: Classhetero-
+geneous federated learning for semantic segmentation,” in Proc.
+IEEE/CVF CVPR, 2023, pp. 8042–8052. [Online]. Available:
+https://openaccess.thecvf.com/content/CVPR2023/html/
+Miao_FedSeg_Class-Heterogeneous_Federated_Learning_
+for_Semantic_Segmentation_CVPR_2023_paper.html
+[10] B. Ma, X. Yin, J. Tan, Y . Chen, H. Huang, H. Wang, W. Xue, and X. Ban,
+“FedST: Federated style transfer learning for non-IID image segmentation,”
+in Proc. AAAI, vol. 38, no. 5, 2024, pp. 4053–4061. [Online]. Available:
+https://doi.org/10.1609/aaai.v38i5.28199
+[11] J. Tan, Y . Li, S. A. Bartalev, B. Dang, W. Chen, Y . Zhang, and L.
+Yuan, “Bridging data islands: Geographic heterogeneity-aware feder-
+ated learning for collaborative remote sensing semantic segmentation,”
+arXiv:2404.09292, 2024. [Online]. Available: https://arxiv.org/
+abs/2404.09292
+[12] X. Yu, X. Wu, X. Wang, D. Li, M. Yang, and P. Cheng, “FedSaaS:
+Class-consistency federated semantic segmentation via global prototype
+supervision and local adversarial harmonization,” in Proc. IJCAI, 2025,
+pp. 6964–6972. [Online]. Available: https://doi.org/10.24963/
+ijcai.2025/770
+[13] S. Paul and S. Ganju, “Flood segmentation on Sentinel-1 SAR imagery
+with semi-supervised learning,” arXiv:2107.08369, 2021. [Online]. Avail-
+able: https://arxiv.org/abs/2107.08369
+[14] Y . Bai, W. Wu, Z. Yang, J. Yu, B. Zhao, X. Liu, H. Yang, E. Mas, and S.
+Koshimura, “Enhancement of detecting permanent water and temporary
+water in flood disasters by fusing Sentinel-1 and Sentinel-2 imagery using
+deep learning algorithms,” Remote Sens., vol. 13, no. 11, p. 2220, 2021.
+[Online]. Available: https://doi.org/10.3390/rs13112220
+[15] M. Rahnemoonfar, T. Chowdhury, A. Sarkar, D. Varshney, M. Yari,
+and R. R. Murphy, “FloodNet: A high resolution aerial imagery
+dataset for post flood scene understanding,” IEEE Access, vol. 9, pp.
+89644–89654, 2021. [Online]. Available:https://doi.org/10.1109/
+ACCESS.2021.3090981
+[16] F. Montello, E. Arnaudo, and C. Rossi, “MMFlood: A multimodal dataset
+for flood delineation from satellite imagery,” IEEE Access, vol. 10, pp.
+96774–96787, 2022. [Online]. Available:https://doi.org/10.1109/
+ACCESS.2022.3205419
+[17] N.-I. Bountos, M. Sdraka, A. Zavras, I. Karasante, A. Karavias, T.
+Herekakis, A. Thanasou, D. Michail, and I. Papoutsis, “Kuro Siwo:
+33 billion m2 under the water—A global multi-temporal satellite
+dataset for rapid flood mapping,” in Proc. NeurIPS Datasets and
+Benchmarks Track, 2024, pp. 38105–38121. [Online]. Available:
+https://proceedings.neurips.cc/paper_files/paper/2024/
+file/43612b0662cb6a4986edf859fd6ebafe-Paper-Datasets_
+and_Benchmarks_Track.pdf
+[18] F. Pech-May, R. Aquino-Santos, O. Alvarez-Cardenas, J. Lozoya- Arandia,
+and G. Rios-Toledo, “Segmentation and visualization of flooded areas
+through Sentinel-1 images and U-Net,” IEEE J. Sel. Topics Appl. Earth
+Observ. Remote Sens., vol. 17, pp. 8996–9008, 2024. [Online]. Available:
+https://doi.org/10.1109/JSTARS.2024.3387452
+[19] E. Portales-Julia, G. Mateo-Garcıa, and L. Gomez-Chova, “Understand-
+ing flood detection models across Sentinel-1 and Sentinel-2 modalities
+and benchmark datasets,” Remote Sens. Environ., vol. 328, p. 114882,
+2025. [Online]. Available: https://doi.org/10.1016/j.rse.2025.
+114882
+[20] M. Fawakherji, J. Blay, M. Anokye, L. Hashemi-Beni, and J. Dor-
+ton, “DeepFlood for inundated vegetation high-resolution dataset
+for accurate flood mapping and segmentation,” Sci. Data, vol. 12,
+p. 271, 2025. [Online]. Available: https://doi.org/10.1038/
+s41597-025-04554-3
+[21] O. Ronneberger, P. Fischer, and T. Brox, “U-Net: Convolutional networks
+for biomedical image segmentation,” in Proc. MICCAI, 2015, pp. 234–
+241, doi: 10.1007/978-3-319-24574-4_28.
+[22] blanchon, “ETCI-2021-Flood-Detection,” Hugging Face dataset,
+revision 921e207ea6aa26e9366fd200725a98b0067f9d6b. [Online].
+Available: https://huggingface.co/datasets/blanchon/
+ETCI-2021-Flood-Detection
+[23] LINKS Foundation, “MMFlood,” Hugging Face dataset, revision
+24ca097306c9e50ad0711903c11e1ba13ea1bedc. [Online]. Available:
+https://huggingface.co/datasets/links-ads/mmflood
+[24] OrionLab, “Kuro-Siwo-Webdataset,” Hugging Face dataset, revision
+e8e61b7b1254b04bfa2b5e26d43db90cb86b5004. [Online]. Avail-
+able: https://huggingface.co/datasets/orion-ai-lab/
+Kuro-Siwo-Webdataset
+[25] F. Montello, E. Arnaudo, and C. Rossi, “MMFlood,” version 1.0.0, Zen-
+odo record 6534637, 2022. [Online]. Available: https://zenodo.org/
+records/6534637
+[26] TorchGeo Contributors, “ETCI2021 flood detection,” TorchGeo 0.10.0
+documentation. [Online]. Available: https://docs.torchgeo.org/
+en/v0.10.0/api/datasets/etci2021.html
+[27] TorchGeo Contributors, “MMFlood dataset source code,” TorchGeo 0.8.0
+documentation. [Online]. Available: https://docs.torchgeo.org/
+en/v0.8.0/_modules/torchgeo/datasets/mmflood.html
+[28] X. Bou, T. Ehret, R. Grompone von Gioi, and J. Anger, “Portray-
+ing the need for temporal data in flood detection via Sentinel-1,”
+arXiv:2403.03671, 2024.
+7
+
