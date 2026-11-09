@@ -1,11 +1,60 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
 
-# Raw full datasets are too large for git; only the Kaggle-ready archive is kept (via LFS)
-data/federated_ready/
-data/federated_kaggle/
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Datasets and checkpoints
+# NOTE: data/federated_kaggle.zip and checkpoints/*.pt are intentionally
+# tracked via Git LFS; the raw/uncompressed data stays ignored.
+/raw_data/
+/data/federated_ready/
+/data/federated_kaggle/
+runs/
+logs/
+outputs/
+*.pth
+*.tar.gz
 
 # LaTeX build artifacts
 report.aux
 report.log
 report.out
+
+# OS generated
+.DS_Store
+Thumbs.db

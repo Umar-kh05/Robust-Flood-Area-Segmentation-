@@ -1,0 +1,60 @@
+# Default experiment configuration matching paper methodology
+
+model:
+  in_channels: 2
+  out_channels: 1
+  image_size: [256, 256]
+  bottleneck_dropout: 0.1
+  group_norm_groups: 8
+  group_norm_eps: 1.0e-5
+
+optimization:
+  optimizer: "sgd"
+  lr: 0.01
+  momentum: 0.0
+  weight_decay: 1.0e-4
+  grad_norm_limit: 5.0
+  batch_size: 8
+
+loss:
+  type: "masked_bce_soft_dice"
+  bce_weight: 0.5
+  dice_weight: 0.5
+  dice_eps: 1.0e-6
+  ignore_index: 255
+
+federated:
+  algorithms: ["fedavg", "fedprox", "fednova", "scaffold"]
+  fedprox_mu: 0.01
+  max_rounds: 100
+  patience: 15
+  main_local_steps: 20
+  unequal_steps:
+    seed_42:
+      etci: 10
+      mmflood: 20
+      kuro_siwo: 30
+    seed_43:
+      kuro_siwo: 10
+      etci: 20
+      mmflood: 30
+    seed_44:
+      mmflood: 10
+      kuro_siwo: 20
+      etci: 30
+
+references:
+  local:
+    max_steps: 2000
+    eval_interval: 20
+    patience: 15
+  centralized:
+    max_steps: 6000
+    eval_interval: 60
+    patience: 15
+
+evaluation:
+  threshold: 0.5
+  ignore_index: 255
+
+seeds: [42, 43, 44]
