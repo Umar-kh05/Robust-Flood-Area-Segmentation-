@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+
+# Raw full datasets are too large for git; only the Kaggle-ready archive is kept (via LFS)
+data/federated_ready/
+data/federated_kaggle/
+
+# LaTeX build artifacts
+report.aux
+report.log
+report.out
