@@ -6,6 +6,26 @@ The experimental design investigates four federated optimization algorithms (**F
 
 ---
 
+## Repository Layout
+
+| Path | Contents |
+|---|---|
+| `flood_federated_learning.ipynb` | **v1** self-contained Kaggle notebook (original protocol) |
+| `flood_federated_learning_v2.ipynb` | **v2** improved notebook — longer training, momentum + cosine LR, threshold tuning, TTA flag, stronger augmentation |
+| `nb_core.py` / `nb_core_v2.py` | Embedded training/FL/plotting code used to build the notebooks |
+| `build_kaggle_notebook*.py` | Notebook assembly scripts |
+| `src/` | Modular Python package (models, losses, metrics, data loaders, federated client/server, baselines) |
+| `scripts/` | CLI runners for the `src/` package |
+| `configs/` | Hyperparameter configuration (`default.yaml`) |
+| `tests/` | Unit and smoke tests |
+| `data/federated_kaggle.zip` | Kaggle-ready dataset archive (600 tiles, 3 clients, train/val/test) — stored via **Git LFS** |
+| `checkpoints/` | Trained model weights (seed 42, all methods) — stored via **Git LFS** |
+| `results/` | Result figures and metrics output |
+| `figures/` | Paper figures |
+| `report.tex` / `report.pdf` | Paper report and LaTeX sources |
+
+---
+
 ## Methodological Summary
 
 ### 1. Data Clients & Preprocessing
@@ -32,109 +52,65 @@ Each client retains its dataset locally, simulating decentralized flood mapping 
 - **Loss**: $0.5 \mathcal{L}_{\text{BCE}} + 0.5 \mathcal{L}_{\text{Dice}}$ over valid pixels ($y \neq 255$).
   - If a mini-batch contains no positive flood pixels, the Dice term is omitted.
   - All-invalid batches are discarded without advancing optimizer step counters.
-- **Local Optimizer**: SGD without momentum, learning rate $\eta = 0.01$, weight decay $10^{-4}$, gradient norm clipping at $5.0$. Batch size: 8 tiles.
-- **Federated Budget**:
-  - **Main Experiment**: 20 local updates per client per round (all 3 clients participating each round), up to 100 rounds.
-  - **Unequal Computation Experiment**: Rotated allocations of $(10, 20, 30)$ local steps across clients over seeds 42, 43, 44 (total 60 steps/round).
-  - **Validation & Early Stopping**: Global model evaluated every round on each client's validation set; best checkpoint selected by highest macro-mean validation flood IoU. Early stopping triggers after 15 consecutive rounds without improvement.
+- **v1 local optimizer**: SGD without momentum, $\eta = 0.01$, weight decay $10^{-4}$, grad-norm clip $5.0$.
+- **v2 local optimizer**: SGD **momentum 0.9 + Nesterov**, $\eta = 0.01$, weight decay $10^{-4}$, grad-norm clip $5.0$, 5-step warmup + cosine decay. Optional `pos_weight` for class imbalance.
+- **v2 evaluation**: decision threshold tuned per run on validation IoU (sweep 0.2–0.8); optional 8-view flip/rotation TTA.
+- **Federated budget**:
+  - **v1**: 10 local steps/client/round, up to 15 rounds (reduced for Kaggle).
+  - **v2**: 30 local steps/client/round, up to 60 rounds; centralized reference matched at ~5,400 steps, local-only at ~1,800 steps.
+  - **Unequal computation**: rotated local-step allocations across clients.
+  - **Validation & Early Stopping**: best checkpoint by highest macro-mean validation flood IoU; early stop after 15 non-improving rounds/checks.
 
 ### 4. Reference Baselines
-- **Local-Only**: Individual U-Net models trained per client on local data (max 2,000 steps, evaluated every 20 steps, patience 15).
-- **Centralized**: Single U-Net trained on pooled training events across all three clients (max 6,000 steps, evaluated every 60 steps, patience 15).
+- **Local-Only**: Individual U-Net models trained per client on local data.
+- **Centralized**: Single U-Net trained on pooled training events across all three clients.
 
 ---
 
-## Repository Structure
+## Running the Experiments
 
-```
-Robust-Flood-Area-Segmentation/
-├── configs/
-│   └── default.yaml          # Hyperparameters and experiment configurations
-├── src/
-│   ├── models/
-│   │   └── unet.py           # Common U-Net with GroupNorm and dropout
-│   ├── losses/
-│   │   └── flood_loss.py     # Masked BCE + Soft Dice loss
-│   ├── metrics/
-│   │   └── flood_metrics.py  # Confusion matrix accumulator and evaluation metrics
-│   ├── data/
-│   │   ├── transforms.py     # SAR normalization, padding, and augmentations
-│   │   ├── etci.py           # ETCI 2021 decoding and split rules
-│   │   ├── mmflood.py        # MMFlood decoding and EMS split rules
-│   │   ├── kuro_siwo.py      # Kuro Siwo decoding and event split rules
-│   │   ├── dataset.py        # FloodDataset and DataLoader utilities
-│   │   └── preprocess.py     # Data audit, manifest builder, and mock generator
-│   ├── federated/
-│   │   ├── client.py         # Client training (FedAvg, FedProx, FedNova, SCAFFOLD)
-│   │   └── server.py         # Server aggregation, validation, and evaluation
-│   ├── baselines/
-│   │   ├── local.py          # Local-only reference training
-│   │   └── centralized.py    # Pooled centralized reference training
-│   └── utils/
-│       └── seed.py           # Deterministic seeding helper
-├── scripts/
-│   ├── generate_mock_data.py # Generates synthetic tiles for pipeline validation
-│   ├── run_federated.py      # Federated experiment runner (main & unequal)
-│   ├── run_local.py          # Local reference runner
-│   ├── run_centralized.py    # Centralized reference runner
-│   └── evaluate.py           # Checkpoint evaluation script
-├── tests/
-│   ├── test_unet.py          # U-Net architecture and seed tests
-│   ├── test_loss.py          # Masked loss edge case tests
-│   ├── test_metrics.py       # Metrics accumulation tests
-│   └── test_federated.py     # End-to-end smoke tests for all 4 FL algorithms
-├── requirements.txt
-└── .gitignore
-```
+### Option A — Kaggle notebook (recommended, GPU)
+1. Create a Kaggle Notebook, set **Accelerator = GPU**.
+2. Attach the dataset (`data/federated_kaggle.zip`, already uploaded as a Kaggle Dataset) or upload the extracted `federated_kaggle/` folder.
+3. Open `flood_federated_learning_v2.ipynb` → **Run All**.
+4. Edit the **Section 3** config cell to scale rounds/steps/seeds to your time budget.
 
----
-
-## Setup & Quickstart
-
-### 1. Requirements Installation
+### Option B — Modular `src/` package
 ```bash
 pip install -r requirements.txt
-```
 
-### 2. Generate Verification Data
-Before downloading large satellite archives, verify the complete pipeline using the mock data generator:
-```bash
+# Generate verification data
 python scripts/generate_mock_data.py --output_dir data/mock --tiles_per_split 16
-```
-This produces `data/mock/manifest.json` and `data/mock/norm_stats.json`.
 
-### 3. Run Federated Training
-**Main experiment (equal local steps: 20 per client/round):**
-```bash
-python scripts/run_federated.py --algorithm fedavg --experiment main --seed 42 --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
-```
-Supported algorithms: `fedavg`, `fedprox`, `fednova`, `scaffold`.
+# Federated training (main & unequal experiments)
+python scripts/run_federated.py --algorithm fedavg --experiment main --seed 42 \
+    --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
 
-**Unequal computation experiment (10, 20, 30 steps/round):**
-```bash
-python scripts/run_federated.py --algorithm fednova --experiment unequal --seed 42 --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
-```
+# Reference baselines
+python scripts/run_local.py --client all --seed 42 \
+    --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
+python scripts/run_centralized.py --seed 42 \
+    --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
 
-### 4. Run Reference Baselines
-**Local-only models:**
-```bash
-python scripts/run_local.py --client all --seed 42 --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
+# Evaluate checkpoints
+python scripts/evaluate.py --checkpoint checkpoints/federated/main_fedavg/fedavg_seed42_best.pt \
+    --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
 ```
 
-**Pooled centralized model:**
-```bash
-python scripts/run_centralized.py --seed 42 --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
-```
+Supported federated algorithms: `fedavg`, `fedprox`, `fednova`, `scaffold`.
 
-### 5. Evaluate Checkpoints
-```bash
-python scripts/evaluate.py --checkpoint checkpoints/federated/main_fedavg/fedavg_seed42_best.pt --manifest data/mock/manifest.json --stats data/mock/norm_stats.json
-```
-
-### 6. Run Unit Tests
+### Tests
 ```bash
 python tests/test_unet.py
 python tests/test_loss.py
 python tests/test_metrics.py
 python tests/test_federated.py
 ```
+
+---
+
+## Results
+
+Trained checkpoints for all methods (seed 42) are in `checkpoints/`; figures and metrics are in `results/` and `figures/`; the compiled paper is `report.pdf`.
+
+> Raw full datasets (`data/federated_ready/`) are **not** included — they exceed repository size limits. Use the download/formatting scripts (`download_datasets.py`, `format_federated_datasets.py`, `format_mmlflood.py`, `prepare_kaggle_dataset.py`) to rebuild them, or use the included `federated_kaggle.zip`.
